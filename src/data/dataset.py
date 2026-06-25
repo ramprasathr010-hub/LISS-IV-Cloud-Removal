@@ -8,7 +8,7 @@ class RICEDataset(Dataset):
         self.label_dir=label_dir
         self.transform=transform
 
-        self.image_name=sorted(os.listdir(cloud_dir))
+        self.image_names=sorted(os.listdir(cloud_dir))
 
     def __len__(self):
         return len(self.image_names)

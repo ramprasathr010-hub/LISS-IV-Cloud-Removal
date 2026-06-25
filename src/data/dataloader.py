@@ -18,7 +18,9 @@ def get_dataloader(cloud_dir, label_dir , batch_size=8, shuffle=True):
     dataloader = DataLoader(
         dataset,
         batch_size=batch_size,
-        shuffle=shuffle
+        shuffle=shuffle,
+        num_workers=4,
+        pin_memory=True
     )
 
     return dataloader
