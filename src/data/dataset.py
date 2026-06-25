@@ -2,7 +2,7 @@ import os
 from PIL import Image
 from torch.utils.data import Dataset
 
-class RICEDatasets(Dataset):
+class RICEDataset(Dataset):
     def __init__(self, cloud_dir, label_dir, transform=None):
         self.cloud_dir=cloud_dir
         self.label_dir=label_dir
@@ -25,3 +25,5 @@ class RICEDatasets(Dataset):
         if self.transform:
             cloud_image=self.transform(cloud_image)
             label_image=self.transform(label_image)
+        
+        return cloud_image,label_image
