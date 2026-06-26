@@ -1,8 +1,6 @@
 import os
 import torch
 from torch.utils.data import DataLoader
-from torch.cuda.amp import GradScaler, autocast
-
 from src.config.config import (
     IMAGE_SIZE,
     BATCH_SIZE,
@@ -31,14 +29,14 @@ def main():
 
     train_dataset=RICEDataset(
         cloud_dirs=[
-            "datasets/raw/RICEDATASET/RICE/RICE1/cloud",
-            "datasets/raw/RICEDATASET/RICE/RICE2/cloud",
+            "datasets/raw/RICE_DATASET/RICE/RICE1/cloud",
+            "datasets/raw/RICE_DATASET/RICE/RICE2/cloud",
         ],
 
         
         label_dirs=[
-            "datasets/raw/RICEDATASET/RICE/RICE1/label",
-            "datasets/raw/RICEDATASET/RICE/RICE2/label",
+            "datasets/raw/RICE_DATASET/RICE/RICE1/label",
+            "datasets/raw/RICE_DATASET/RICE/RICE2/label",
         ],
         transform=train_transform,
     ) 
@@ -50,6 +48,10 @@ def main():
         num_workers=NUM_WORKERS,
         pin_memory=True,
     )
+    
+    print("Dataset Size:", len(train_dataset))
+    print("Number of batches:", len(train_loader))
+
 
     generator=U2NET(in_ch=3, out_ch=3).to(DEVICE)
     
@@ -70,9 +72,6 @@ def main():
         lr=LEARNING_RATE,
         betas=(0.5, 0.999),
     )
-
-    g_scaler=GradScaler()
-    d_scaler=GradScaler()
 
     for epoch in range(EPOCHS):
 
@@ -98,4 +97,34 @@ def main():
 
             real_loss=gan_loss(real_pred, real_target)
             fake_loss=gan_loss(fake_pred, fake_target)
+            
             d_loss=(real_loss+fake_loss)*0.5
+            d_optimizer.zero_grad()
+            d_loss.backward()
+            d_optimizer.step()
+
+            fake_pair=torch.cat([cloud_img,fake_img], dim=1)
+            pred_fake=discriminator(fake_pair)
+            target_real=torch.ones_like(pred_fake)
+
+            g_gan_loss=gan_loss(pred_fake, target_real)
+            g_l1_loss=l1_loss(fake_img, label_img)
+            g_loss=g_gan_loss+LAMBDA_L1*g_l1_loss
+            
+            g_optimizer.zero_grad()
+            g_loss.backward()
+            g_optimizer.step()
+
+            print(
+                f"Batch [{batch_idx+1}/{len(train_loader)}] "
+                f"D Loss: {d_loss.item():.4f} "
+                f"G Loss: {g_loss.item():.4f} "
+                f"L1: {g_l1_loss.item():.4f} "
+            )
+
+        torch.save(generator.state_dict(), os.path.join(CHECKPOINT_DIR, f"generator_epoch_{epoch+1}.pth"))
+        torch.save(discriminator.state_dict(), os.path.join(CHECKPOINT_DIR, f"discriminator_epoch_{epoch+1}.pth"))
+
+
+if __name__ == "__main__":
+    main()
