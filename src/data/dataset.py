@@ -3,22 +3,25 @@ from PIL import Image
 from torch.utils.data import Dataset
 
 class RICEDataset(Dataset):
-    def __init__(self, cloud_dir, label_dir, transform=None):
-        self.cloud_dir=cloud_dir
-        self.label_dir=label_dir
+    def __init__(self, cloud_dirs, label_dirs, transform=None):
         self.transform=transform
+        self.samples=[]
 
-        self.image_names=sorted(os.listdir(cloud_dir))
+        for cloud_dir, label_dir in zip(cloud_dirs, label_dirs):
+            image_names=sorted(os.listdir(cloud_dir))
+
+            for image_name in image_names:
+                self.samples.append((
+                    os.path.join(cloud_dir, image_name),
+                    os.path.join(label_dir,image_name)  
+                ))
 
     def __len__(self):
-        return len(self.image_names)
+        return len(self.samples)
     
     def __getitem__(self, idx):
-        image_name=self.image_names[idx]
-
-        cloud_path=os.path.join(self.cloud_dir,image_name)
-        label_path=os.path.join(self.label_dir,image_name)
-
+        cloud_path, label_path = self.samples[idx]
+        
         cloud_image=Image.open(cloud_path).convert("RGB")
         label_image=Image.open(label_path).convert("RGB")
 
