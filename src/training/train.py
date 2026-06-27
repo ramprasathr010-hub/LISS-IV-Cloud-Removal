@@ -1,6 +1,7 @@
 import os
 import torch
 from torch.utils.data import DataLoader
+from torchvision.utils import save_image
 from src.config.config import (
     IMAGE_SIZE,
     BATCH_SIZE,
@@ -11,6 +12,10 @@ from src.config.config import (
     DEVICE,
     CHECKPOINT_DIR,
     SAMPLE_DIR,
+    RESUME_TRAINING,
+    START_EPOCH,
+    GENERATOR_CHECKPOINT,
+    DISCRIMINATOR_CHECKPOINT,
 )
 
 from src.data.dataset import RICEDataset
@@ -46,7 +51,7 @@ def main():
         batch_size=BATCH_SIZE,
         shuffle=True,
         num_workers=NUM_WORKERS,
-        pin_memory=True,
+        pin_memory=(DEVICE == "cuda"),
     )
     
     print("Dataset Size:", len(train_dataset))
@@ -54,12 +59,34 @@ def main():
 
 
     generator=U2NET(in_ch=3, out_ch=3).to(DEVICE)
+
+    if RESUME_TRAINING:
+        print(f"Loading checkpoint: {GENERATOR_CHECKPOINT}")
+
+        generator.load_state_dict(
+            torch.load(
+                GENERATOR_CHECKPOINT,
+                map_location=DEVICE
+            )
+        )
+        print("Generator checkpoint loaded successfully!")
     
     discriminator=NLayerDiscriminator(
         input_nc=6,
         ndf=64,
         n_layers=3,
     ).to(DEVICE)
+
+    if RESUME_TRAINING:
+        print(f"Loading discriminator checkpoint: {DISCRIMINATOR_CHECKPOINT}")
+
+        discriminator.load_state_dict(
+            torch.load(
+                DISCRIMINATOR_CHECKPOINT,
+                map_location=DEVICE
+            )
+        )
+        print("Discriminator checkpoint loaded successflly!")
 
     g_optimizer=torch.optim.Adam(
         generator.parameters(),
@@ -73,8 +100,7 @@ def main():
         betas=(0.5, 0.999),
     )
 
-    for epoch in range(EPOCHS):
-
+    for epoch in range(START_EPOCH, EPOCHS):
         print(f"\nEpoch [{epoch+1}/{EPOCHS}]")
         generator.train()
         discriminator.train()
@@ -84,6 +110,7 @@ def main():
             label_img=label_img.to(DEVICE)
             
             outputs=generator(cloud_img)
+
             fake_img=outputs[0]
 
             real_pair=torch.cat([cloud_img,label_img],dim=1)
@@ -115,16 +142,47 @@ def main():
             g_loss.backward()
             g_optimizer.step()
 
-            print(
+            if batch_idx==0 and (epoch+1)%5==0:
+               
+               torch.save(
+                generator.state_dict(),
+                os.path.join(
+                    CHECKPOINT_DIR,
+                    f"generator_epoch_{epoch+1}.pth"
+                   )
+                )
+
+               torch.save(
+                   discriminator.state_dict(),
+                os.path.join(
+                    CHECKPOINT_DIR,
+                    f"discriminator_epoch_{epoch+1}.pth"
+                   )
+                )
+               
+               print(f"Checkpoint saved for epoch {epoch+1}")
+               print(f"Sample images saved for epoch {epoch+1}")
+
+               sample_dir=os.path.join(
+                    SAMPLE_DIR,
+                    f"epoch_{epoch + 1}"
+                )
+
+               os.makedirs(sample_dir,exist_ok=True)
+
+               save_image(cloud_img[0].cpu(), os.path.join(sample_dir, "input.png"))
+               save_image(fake_img[0].cpu(), os.path.join(sample_dir, "prediction.png"))
+               save_image(label_img[0].cpu(), os.path.join(sample_dir, "target.png"))
+
+            if batch_idx % 50 ==0:
+               print(
                 f"Batch [{batch_idx+1}/{len(train_loader)}] "
                 f"D Loss: {d_loss.item():.4f} "
                 f"G Loss: {g_loss.item():.4f} "
                 f"L1: {g_l1_loss.item():.4f} "
-            )
+                )   
 
-        torch.save(generator.state_dict(), os.path.join(CHECKPOINT_DIR, f"generator_epoch_{epoch+1}.pth"))
-        torch.save(discriminator.state_dict(), os.path.join(CHECKPOINT_DIR, f"discriminator_epoch_{epoch+1}.pth"))
-
+       
 
 if __name__ == "__main__":
     main()

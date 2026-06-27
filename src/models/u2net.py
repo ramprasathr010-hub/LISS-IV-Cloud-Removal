@@ -408,6 +408,7 @@ class U2NET(nn.Module):
 
         d4 = self.side4(hx4d)
         d4 = _upsample_like(d4,d1)
+        
 
         d5 = self.side5(hx5d)
         d5 = _upsample_like(d5,d1)

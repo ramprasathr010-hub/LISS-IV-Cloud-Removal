@@ -1,3 +1,12 @@
+
 temp_u2net/
 temp_pix2pix/
 .vscode/
+
+__pycache__/
+*.pyc
+
+checkpoints/
+outputs/
+
+
