@@ -38,7 +38,7 @@ def predict(generator, image):
 
 if __name__=="__main__":
     print("Step 1: Main started")
-    checkpoint_path="checkpoints/generator_epoch_5.pth"
+    checkpoint_path="checkpoints/generator_epoch_100.pth"
     input_image="datasets/raw/RICE_DATASET/RICE/RICE1/cloud/1.png"
     output_image="outputs/predicted.png"
 
