@@ -33,7 +33,11 @@ def load_image(image_path):
 def predict_folder(generator, input_folder, output_folder):
     os.makedirs(output_folder, exist_ok=True)
 
-    image_paths=sorted(glob.glob(os.path.join(input_folder, "*.png")))
+    image_paths=sorted(
+        glob.glob(os.path.join(input_folder, "*.png"))+
+        glob.glob(os.path.join(input_folder, "*.jpg"))+
+        glob.glob(os.path.join(input_folder, "*.jpeg"))
+        )
 
     print(f"Found {len(image_paths)} images")
 
